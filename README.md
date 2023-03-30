@@ -1,7 +1,7 @@
 # Brownian/ballistic annihilation
 
 > Diffusion-reaction processes can model many interesting situations. They are used for instance to model disease
-propagation in the same way as chemical reactions: H+S → 2S (contamination), S → H (healing), S→ ∅ (death)
+propagation in the same way as chemical reactions: H+S → 2S (contamination), S → H (healing), S → ∅ (death)
 with H healthy and S sick. Depending on the reactive particles dynamical properties (ballistic or brownian), on
 the space dimensionality, etc, interesting phenomena are observed.
 In 1983 D. Toussaint and F. Wilczek considered a simple situation of 2 reactive Brownian species A, A* obeying
