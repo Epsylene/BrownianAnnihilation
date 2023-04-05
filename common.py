@@ -30,7 +30,7 @@ def concentration(simul, full_plot=False):
         plt.plot(range(N), concentration)
         if full_plot: plt.ylim(0, 1)
 
-def left(simul, params, n_exp):
+def end_state(simul, params, n_exp):
     '''
     Plots the average concentrations for a given type of
     simulation over a number of experiments with different
@@ -58,13 +58,13 @@ def left(simul, params, n_exp):
                 particles = np.where(all == 1)
                 concentrations[i, j, k] = np.size(particles)/np.ma.count(all)
     
-    init_pop = [rf'$n_0 = {n0}$' for n0 in n]
+    n0_labels = [rf'$n_0 = {n0}$' for n0 in n]
     avg_c = [[np.average(c_n) for c_n in c] for c in concentrations]
 
-    x = np.arange(len(init_pop))
+    x = np.arange(len(n0_labels))
     for (i, c0) in enumerate(c):
         plt.bar(x + 0.3*i, avg_c[i], width=0.3, label=rf'$c_0$ = {c0}')
-    plt.xticks(x + 0.15, init_pop)
+    plt.xticks(x + 0.15, n0_labels)
     plt.title(f'Average final concentration over {n_exp} experiments\nwith different initial populations and concentrations')
     plt.legend()
 
