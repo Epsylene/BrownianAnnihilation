@@ -91,10 +91,14 @@ class Ballistic:
         # Plot the trajectories of all particles
         for i, p in enumerate(self.particles):
             plt.plot(range(N), x[:, i], color = 'b' if p == 1 else 'r')
-        
-        # (t_wrap, i_wrap) = np.where(self.wrapped == 1)
-        # plt.scatter(t_wrap, self.x[t_wrap, i_wrap], color='k', s=10)
 
         plt.xlim(-N/20, N + N/20)
         plt.ylim(-L/10, L + L/10)
+        plt.xticks([])
+        plt.yticks([])
+
+        plt.title('Ballistic simulation of particles and antiparticles\n'+rf'($n_0 = {self.n}$, $c_0 = {self.c}$, $N = {N}$)')
+        plt.xlabel('Time')
+        plt.ylabel('Position')
+
         plt.show()

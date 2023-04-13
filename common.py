@@ -30,9 +30,15 @@ def concentration(simul, full_plot=False):
         plt.plot(range(N), concentration)
         if full_plot: plt.ylim(0, 1)
 
+        plt.title(rf'Concentration of particles over time ($c_0 = {concentration[0]}$)')
+        plt.xlabel('Time')
+        plt.ylabel('Concentration')
+
+        plt.show()
+
 def end_state(simul, params, n_exp):
     '''
-    Plots the average concentrations for a given type of
+    Plots the average final concentrations for a given type of
     simulation over a number of experiments with different
     parameters.
 
@@ -42,7 +48,8 @@ def end_state(simul, params, n_exp):
         params: array with 2 tuples
             The simulations parameters. The first tuple is
             expected to contain the initial numbers of particles
-            and the second the initial concentrations.
+            and the second the initial concentrations. An
+            example input is [(5, 10, 20), (0.2, 0.8)].
         n_exp: int
             The number of experiments to perform for each pair
             of parameters.
@@ -50,6 +57,10 @@ def end_state(simul, params, n_exp):
     n, c = params
     concentrations = np.zeros((len(c), len(n), n_exp))
 
+    # For each pair (n0, c0) (initial number of particles and
+    # concentration), repeatedly create a simulation and
+    # calculate the end concentration (non-annihilated particles
+    # over all non-annihilated)
     for (i, c0) in enumerate(c):
         for (j, n0) in enumerate(n):
             for k in range(n_exp):
@@ -58,9 +69,11 @@ def end_state(simul, params, n_exp):
                 particles = np.where(all == 1)
                 concentrations[i, j, k] = np.size(particles)/np.ma.count(all)
     
+    # Average the concentrations over 
     n0_labels = [rf'$n_0 = {n0}$' for n0 in n]
     avg_c = [[np.average(c_n) for c_n in c] for c in concentrations]
 
+    # Display a bar chart of the 
     x = np.arange(len(n0_labels))
     for (i, c0) in enumerate(c):
         plt.bar(x + 0.3*i, avg_c[i], width=0.3, label=rf'$c_0$ = {c0}')

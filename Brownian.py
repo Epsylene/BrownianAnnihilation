@@ -2,12 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class Brownian:
-    def __init__(self, n, c, N=100, adaptative=True):
+    def __init__(self, n, c, N=100):
         self.n = n # number of particles
         self.c = c # initial proportion of particles
-
-        if(adaptative): self.plot_N = 3*n
-        else: self.plot_N = N
         self.N = N
 
         # Place particles at even intervals along the axis and
@@ -45,8 +42,11 @@ class Brownian:
 
             x[t + 1] = x[t] + np.random.choice([-1/(2*n), 1/(2*n)], size=n)
 
-    def plot(self):
+    def plot(self, adaptative=True):
         N, n = self.N, self.n
+
+        if(adaptative): self.plot_N = 3*n
+        else: self.plot_N = N
 
         # Plot the grid lines
         kwargs = {'color': 'k', 'ls': '--', 'lw': 0.2}
@@ -69,8 +69,8 @@ class Brownian:
         plt.xticks([])
         plt.yticks([])
 
-        plt.title("Discrete brownian walk of particles and antiparticles")
-        plt.xlabel("Time")
-        plt.ylabel("Position")
+        plt.title('Discrete brownian walk of particles and antiparticles\n'+rf'($n_0 = {self.n}$, $c_0 = {self.c}$, $N = {N}$)')
+        plt.xlabel('Time')
+        plt.ylabel('Position')
 
         plt.show()
