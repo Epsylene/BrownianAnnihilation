@@ -1,18 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.optimize as scp
 
-def concentration(simul, full_plot=False):
+def concentration(simul, plot=False):
         '''
-        Calculate the concentration of particles in the given
-        simulation over time.
+        Return and eventually plot the concentration of
+        particles in the given simulation over time.
 
         Args:
             simul: Brownian, Ballistic
                 The simulation.
-            full_plot: bool
-                If True, plot the concentration between 0 and 1,
-                regardless of its starting value. If False, plot
-                between the minimum and maximum values.
+            plot: bool
+                If True, plot the concentration between its
+                minimum and maximum values.
         '''
         N = simul.N
 
@@ -27,14 +27,15 @@ def concentration(simul, full_plot=False):
         for t in range(N):
             concentration[t] = np.ma.count(x[t, p_idx])/np.ma.count(x[t])
 
-        plt.plot(range(N), concentration)
-        if full_plot: plt.ylim(0, 1)
+        if plot:
+            plt.plot(range(N), concentration)
 
-        plt.title(rf'Concentration of particles over time ($c_0 = {concentration[0]}$)')
-        plt.xlabel('Time')
-        plt.ylabel('Concentration')
+            plt.title(rf'Concentration of particles over time ($c_0 = {simul.c}$)')
+            plt.xlabel('Time')
+            plt.ylabel('Concentration')
+            plt.show()
 
-        plt.show()
+        return concentration
 
 def end_state(simul, params, n_exp):
     '''
@@ -81,4 +82,49 @@ def end_state(simul, params, n_exp):
     plt.title(f'Average final concentration over {n_exp} experiments\nwith different initial populations and concentrations')
     plt.legend()
 
+    plt.show()
+
+def avg_concentration(simul, params, n_exp):
+
+    n0, c0, *_ = params
+    N = _[0] if _ else 100
+
+    t = np.arange(N)
+    c = np.zeros((n_exp, N))
+    for i in range(n_exp):
+        b = simul(*params)
+        c[i] = concentration(b)
+        plt.plot(t, c[i], lw=0.5)
+
+    c = np.average(c, axis=0)
+    plt.plot(c, c='k')
+
+    plt.title(f'Average concentration over {n_exp}\n'+rf'experiments with $n_0 = {n0}$, $c_0 = {c0}$')
+    plt.xlabel('Time')
+    plt.ylabel('Concentration')
+    plt.show()
+
+    return c
+
+def fit(concentration):
+    t = np.arange(len(concentration))
+    c_model = lambda t, a, b, c, d: a + b/(t+c)**d
+
+    args, _ = scp.curve_fit(c_model, t, concentration)
+    fit = c_model(t, *args)
+    r2 = 1 - np.sum((concentration - fit)**2)/np.sum((concentration - np.average(concentration))**2)
+
+    print('Concentration fit a+b/(t+c)^d, with:')
+    print('a = {}, b = {},\nc = {}, d = {}'.format(*args))
+    print(f'R^2 = {r2}')
+
+    plt.scatter(t, concentration, c='k', s=1, label='Simulation')
+    plt.plot(t, fit, label='Model')
+
+    s = '-' if args[1] < 0 else ''
+    plt.title(rf'Concentration fit, {s}$1/t^\alpha$ with $\alpha = {args[3]:.2f}$')
+    plt.xlabel('Time')
+    plt.ylabel('Concentration')
+    plt.legend()
+    
     plt.show()

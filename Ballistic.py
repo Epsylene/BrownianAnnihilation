@@ -5,10 +5,9 @@ class Ballistic:
     def __init__(self, n, c, L = 1, N = 100):
         self.n = n # number of particles
         self.c = c # initial proportion of particles
-
         self.N = N # number of time steps
-        self.dt = 1/500 # time step interval
 
+        self.dt = 1/500 # time step interval
         self.L = L # box size
         v0 = 1 # particles initial velocity
 
