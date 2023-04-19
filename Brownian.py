@@ -12,6 +12,7 @@ class Brownian:
         # haven't been calculated
         self.x = np.ma.zeros((self.N, n))
         self.x[0] = np.random.choice(np.linspace(-1, 1, 2*n+1), size=n, replace=False)
+        self.x[1:, :] = np.nan
 
         # Assign a number of particle and antiparticle state
         n_p = int(n*c)
@@ -25,22 +26,22 @@ class Brownian:
         x, particles = self.x, self.particles
 
         self.annihilated = annihilated = np.zeros((N, n))
+        dx = np.random.choice([-1/(2*n), 1/(2*n)], size=(N, n))
 
-        for ((t, i), _) in np.ndenumerate(x[0:N-1]):
-            # Check if the particle has already been annihilated
-            if annihilated[t, i] == 1: 
-                continue
+        for (t, _) in enumerate(x[0:N-1]):
+            idx = np.argsort(np.round(x[t], decimals=6))
+            # print(t, np.round(x[t], decimals=4))
+            _, u_pos = np.unique(np.round(x[t, idx], decimals=6), return_index=True)
+            res = np.split(idx, u_pos[1:])
+            res = list(filter(lambda x: x.size > 1, res))
 
-            for j in range(i):
-                # Check if the particle has already been annihilated 
-                if annihilated[t, j] == 1: 
-                    continue
+            for e in res:
+                collided = particles[e] + 1
+                if np.prod(collided) == 0 and ~np.all(collided == 0):
+                    annihilated[t+1:, e] = 1
 
-                # Check if particles are of opposite kind and have collided
-                if particles[i] == -particles[j] and np.allclose(x[t, i], x[t, j]):
-                    annihilated[t+1:, i] = annihilated[t+1:, j] = 1
-
-            x[t + 1] = x[t] + np.random.choice([-1/(2*n), 1/(2*n)], size=n)
+            alive = np.where(annihilated[t+1] == 0)
+            x[t+1, alive] = x[t, alive] + dx[t, alive]
 
     def plot(self, adaptative=True):
         N, n = self.N, self.n

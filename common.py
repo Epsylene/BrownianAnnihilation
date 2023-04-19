@@ -30,7 +30,7 @@ def concentration(simul, plot=False):
         if plot:
             plt.plot(range(N), concentration)
 
-            plt.title(rf'Concentration of particles over time ($c_0 = {simul.c}$)')
+            plt.title(rf'Concentration of particles over time ($n_0 = {simul.n}$, $c_0 = {simul.c}$)')
             plt.xlabel('Time')
             plt.ylabel('Concentration')
             plt.show()
@@ -126,5 +126,5 @@ def fit(concentration):
     plt.xlabel('Time')
     plt.ylabel('Concentration')
     plt.legend()
-    
+
     plt.show()
