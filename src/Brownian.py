@@ -6,12 +6,13 @@ class Brownian:
         self.n = n # number of particles
         self.c = c # initial proportion of particles
         self.N = N
+        self.L = L = n
 
         # Place particles at even intervals along the axis and
         # fill the rest with NaNs to avoid plotting values that
         # haven't been calculated
         self.x = np.ma.zeros((self.N, n))
-        self.x[0] = np.random.choice(np.linspace(-1, 1, 2*n+1), size=n, replace=False)
+        self.x[0] = np.random.choice(np.linspace(-L, L, 2*n+1), size=n, replace=False)
         self.x[1:, :] = np.nan
 
         # Assign a number of particle and antiparticle state
@@ -22,16 +23,15 @@ class Brownian:
         self.compute()
 
     def compute(self):
-        N, n = self.N, self.n
+        N, n, L = self.N, self.n, self.L
         x, particles = self.x, self.particles
 
         self.annihilated = annihilated = np.zeros((N, n))
-        dx = np.random.choice([-1/(2*n), 1/(2*n)], size=(N, n))
+        dx = np.random.choice([-0.5, 0.5], size=(N, n))
 
         for (t, _) in enumerate(x[0:N-1]):
-            idx = np.argsort(np.round(x[t], decimals=6))
-            # print(t, np.round(x[t], decimals=4))
-            _, u_pos = np.unique(np.round(x[t, idx], decimals=6), return_index=True)
+            idx = np.argsort(x[t])
+            _, u_pos = np.unique(x[t, idx], return_index=True)
             res = np.split(idx, u_pos[1:])
             res = list(filter(lambda x: x.size > 1, res))
 
@@ -43,20 +43,20 @@ class Brownian:
             alive = np.where(annihilated[t+1] == 0)
             x[t+1, alive] = x[t, alive] + dx[t, alive]
 
-    def plot(self, adaptative=True):
-        N, n = self.N, self.n
+    def plot(self, adaptative=False):
+        N, n, L = self.N, self.n, self.L
+        plot_N = N if adaptative else 3*n
 
-        if(adaptative): self.plot_N = 3*n
-        else: self.plot_N = N
-
+        if adaptative: plt.figure(figsize=(7/100*N, 1/5*n))
         # Plot the grid lines
         kwargs = {'color': 'k', 'ls': '--', 'lw': 0.2}
-        for i in np.linspace(-1, 1, 2*n+1):
-            plt.axline((0, i), slope=1/(2*n), **kwargs)
-            plt.axline((0, i), slope=-1/(2*n), **kwargs)
-        for i in np.arange(2, self.plot_N, 2):
-            plt.axline((i, -1), slope=1/(2*n), **kwargs)
-            plt.axline((i, 1), slope=-1/(2*n), **kwargs)
+        if n < 100 or adaptative:
+            for i in np.linspace(-L, L, 2*n+1):
+                plt.axline((0, i), slope=1/2, **kwargs)
+                plt.axline((0, i), slope=-1/2, **kwargs)
+            for i in np.arange(2, plot_N, 2):
+                plt.axline((i, -L), slope=1/2, **kwargs)
+                plt.axline((i, L), slope=-1/2, **kwargs)
 
         # Mask the annihilated particles
         x = np.ma.array(self.x, mask=self.annihilated)
@@ -65,8 +65,8 @@ class Brownian:
         for i, p in enumerate(self.particles):
             plt.plot(range(N), x[:, i], color = 'b' if p == 1 else 'r')
 
-        plt.ylim([-1, 1])
-        plt.xlim([0, self.plot_N-1])
+        plt.ylim([-L, L])
+        plt.xlim([0, N-1 if adaptative else 3*n])
         plt.xticks([])
         plt.yticks([])
 

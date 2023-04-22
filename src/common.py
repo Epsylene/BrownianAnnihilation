@@ -86,8 +86,8 @@ def end_state(simul, params, n_exp):
 
 def avg_concentration(simul, params, n_exp):
 
-    n0, c0, *_ = params
-    N = _[0] if _ else 100
+    n0, c0, *targs = params
+    N = targs[0] if targs else 100
 
     t = np.arange(N)
     c = np.zeros((n_exp, N))
