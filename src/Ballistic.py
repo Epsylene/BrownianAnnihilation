@@ -2,21 +2,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class Ballistic:
-    def __init__(self, n, c, L = 1, N = 100):
+    def __init__(self, n, c, L = 1, v0 = 1, N = 100):
         self.n = n # number of particles
         self.c = c # initial proportion of particles
         self.N = N # number of time steps
 
         self.dt = 1/500 # time step interval
-        self.L = L # box size
-        v0 = 1 # particles initial velocity
+        self.L = L*(1 + n/500) # box size
+        self.v0 = v0 # particles initial velocity
 
         # Place particles at even intervals along the axis and
         # fill the rest with NaNs to avoid plotting values that
         # haven't been calculated
-        self.x = np.ma.zeros((self.N, n))
-        self.x[0] = self.L*np.random.choice(np.linspace(0.02, 0.98, n), size=n, replace=False)
-        self.x[1:, :] = np.nan
+        self.x = np.ma.ones((self.N, n), dtype=np.float32) * np.nan
+        self.x[0] = np.random.choice(np.linspace(self.L*0.05, self.L*0.95, n), size=n, replace=False)
 
         # Randomly assign a number of particle and anti-particle
         # states, according to the initial concentration
@@ -37,46 +36,23 @@ class Ballistic:
         self.annihilated = annihilated = np.zeros((N, n))
         self.wrapped = np.zeros((N, n))
 
-        for ((t, i), _) in np.ndenumerate(x[0:N-1]):
-            # If the particle has already been annihilated,
-            # skip to the next one
-            if (annihilated[t, i] == 1):
-                continue
+        for (t, _) in enumerate(x[1:N-1]):
+            diff_t = np.subtract.outer(x[t-1], x[t-1])
+            diff_t1 = np.subtract.outer(x[t], x[t])
+            diff = np.multiply(diff_t, diff_t1)
+            coll = np.argwhere(np.logical_and(abs(diff_t) < 0.1, diff < 0))
+            
+            for e in coll:
+                if np.sum(particles[e]) == 0:
+                    annihilated[t:, e] = 1
+                    x[t, e] = np.nan
+                else:
+                    a, b = e
+                    v[[a, b]] = v[[b, a]]
 
-            # Collision checking: if the distance between two
-            # particles changes sign between t and t+dt, then
-            # they must have collided.
-            for j in range(i):
-                # Check that the particle hasn't already been
-                # annihilated
-                if(annihilated[t, j] == 1):
-                    continue
-
-                dx0 = x[t, i] - x[t, j]
-                dx1 = x[t+1, i] - x[t+1, j]
-
-                # If one is a particle and the other is an
-                # anti-particle, then they annihilate each
-                # other; else, they bounce off each other in an
-                # elastic fashion.
-                if abs(dx0) < 0.1 and dx0*dx1 < 0:
-                    if particles[i] == -particles[j]:
-                        # NaN values are not shown by
-                        # matplotlib, so a particle and
-                        # anti-particle tracks stop after their
-                        # collision
-                        x[t, i] = x[t, j] = np.nan
-                        annihilated[t:, i] = annihilated[t:, j] = 1
-                    else:
-                        # Boucing off elastically means that
-                        # velocities are reversed for both
-                        # particles
-                        v[i] *= -1; v[j] *= -1
-
-            # Bounds checking: wrap particles around [0, L]
-            if x[t, i] > L or x[t, i] < 0:
-                x[t, i] %= L
-                self.wrapped[t, i] = 1
+            out = np.where(np.logical_or(x[t] > L, x[t] < 0))
+            x[t, out] %= L
+            self.wrapped[t, out] = 1
 
             # Move all particles by one step
             x[t + 1] = x[t] + v*dt
@@ -92,7 +68,7 @@ class Ballistic:
             plt.plot(range(N), x[:, i], color = 'b' if p == 1 else 'r')
 
         plt.xlim(-N/20, N + N/20)
-        plt.ylim(-L/10, L + L/10)
+        plt.ylim(-L*0.05, L*1.05)
         plt.xticks([])
         plt.yticks([])
 

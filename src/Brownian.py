@@ -30,15 +30,24 @@ class Brownian:
         dx = np.random.choice([-0.5, 0.5], size=(N, n))
 
         for (t, _) in enumerate(x[0:N-1]):
+            # xt = np.ma.array(x[t], mask=annihilated[t])
             idx = np.argsort(x[t])
             _, u_pos = np.unique(x[t, idx], return_index=True)
             res = np.split(idx, u_pos[1:])
             res = list(filter(lambda x: x.size > 1, res))
 
             for e in res:
-                collided = particles[e] + 1
-                if np.prod(collided) == 0 and ~np.all(collided == 0):
+                sum = np.sum(particles[e])
+                if sum == 0:
+                    annihilated[t+1, e] = 1
+                elif sum == 1:
                     annihilated[t+1:, e] = 1
+                    e = e[np.where(particles[e] == 1)][0]
+                    annihilated[t+1:, e] = 0
+                elif sum == -1:
+                    annihilated[t+1:, e] = 1
+                    e = e[np.where(particles[e] == -1)][0]
+                    annihilated[t+1:, e] = 0
 
             alive = np.where(annihilated[t+1] == 0)
             x[t+1, alive] = x[t, alive] + dx[t, alive]
