@@ -12,7 +12,7 @@ def concentration(simul, plot=False):
                 The simulation.
             plot: bool
                 If True, plot the concentration between its
-                minimum and maximum values.
+                minimum and maximum values. Default False.
         '''
         N = simul.N
 
