@@ -4,8 +4,8 @@ import scipy.optimize as scp
 
 def concentration(simul, plot=False):
         '''
-        Return and eventually plot the concentration of
-        particles in the given simulation over time.
+        Return and eventually plot the concentration (as in
+        density) of particles in the given simulation over time.
 
         Args:
             simul: Brownian, Ballistic
@@ -21,21 +21,20 @@ def concentration(simul, plot=False):
         x = np.ma.array(simul.x, mask=simul.annihilated)
 
         # The concentration of particles over time is the number
-        # particles divided by the total number of particles and
-        # antiparticles.
-        concentration = np.zeros(N)
+        # particles divided by the size of the box.
+        density = np.zeros(N)
         for t in range(N):
-            concentration[t] = np.ma.count(x[t, p_idx])/np.ma.count(x[t])
+            density[t] = np.ma.count(x[t, p_idx])/simul.L
 
         if plot:
-            plt.plot(range(N), concentration)
+            plt.plot(range(N), density)
 
-            plt.title(rf'Concentration of particles over time ($n_0 = {simul.n}$, $c_0 = {simul.c}$)')
+            plt.title(rf'Density of particles over time ($n_0 = {simul.n}$, $c_0 = {simul.c}$)')
             plt.xlabel('Time')
             plt.ylabel('Concentration')
             plt.show()
 
-        return concentration
+        return density
 
 def end_state(simul, params, n_exp):
     '''
@@ -106,11 +105,11 @@ def avg_concentration(simul, params, n_exp):
 
     return c
 
-def fit(concentration):
+def fit(concentration, recursion=1000):
     t = np.arange(len(concentration))
     c_model = lambda t, a, b, c, d: a + b/(t+c)**d
 
-    args, _ = scp.curve_fit(c_model, t, concentration)
+    args, _ = scp.curve_fit(c_model, t, concentration, maxfev=recursion)
     fit = c_model(t, *args)
     r2 = 1 - np.sum((concentration - fit)**2)/np.sum((concentration - np.average(concentration))**2)
 
@@ -119,7 +118,7 @@ def fit(concentration):
     print(f'R^2 = {r2}')
 
     plt.scatter(t, concentration, c='k', s=1, label='Simulation')
-    plt.plot(t, fit, label='Model')
+    plt.plot(t, fit, label='Fit')
 
     s = '-' if args[1] < 0 else ''
     plt.title(rf'Concentration fit, {s}$1/t^\alpha$ with $\alpha = {args[3]:.2f}$')
@@ -128,3 +127,5 @@ def fit(concentration):
     plt.legend()
 
     plt.show()
+
+    return args[3]
