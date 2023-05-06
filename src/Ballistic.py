@@ -33,9 +33,9 @@ class Ballistic:
 
         self.dt = 1/500 # time step interval
         self.L = L*(1 + n/500) # box size (made bigger as the 
-            # number of particles increase to avoid floating
-            # point issues when placing too much particles in
-            # a box that is too small)
+            # number of particles increases to avoid floating
+            # point issues when placing too much particles in a
+            # box that is too small)
         self.v0 = v # initial velocity
 
         # Place particles at even intervals along the axis and
@@ -47,6 +47,10 @@ class Ballistic:
         # compute() (and apparently, performance too ?)
         self.x = np.ma.ones((self.N, n), dtype=np.float32) * np.nan
         self.x[0] = np.random.choice(np.linspace(self.L*0.05, self.L*0.95, n), size=n, replace=False)
+
+        a = int(L/(v*self.dt))
+        self.space = np.zeros((N, a))
+        self.space[:] = np.linspace(0, L, a)
 
         # Randomly assign a number of particle and anti-particle
         # states, according to the initial concentration

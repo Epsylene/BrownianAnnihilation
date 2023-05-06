@@ -129,3 +129,59 @@ def fit(concentration, recursion=1000):
     plt.show()
 
     return args[3]
+
+def distribution(simul, m=None, T=None, proj='2d', savefig=False):
+    n, N, L = simul.n, simul.N, simul.L
+    if T == None: T = simul.N-2
+    if m == None: m = 50 if proj == '2d' else 10
+
+    x = simul.space
+    distr = np.zeros(x.shape)
+    part = simul.particles
+
+    for t in range(T+1):
+        for (i, xi) in enumerate(simul.x[t]):
+            idx = np.where(abs(x[t] - xi) < 0.001)
+            distr[t, idx] = part[i]
+
+    if proj == '2d':
+        plt.scatter(np.nan, np.nan, c='b', s=1, label='Particles')
+        plt.scatter(np.nan, np.nan, c='r', s=1, label='Anti-particles')
+        for (i, d) in enumerate(distr[T]):
+            l = {1: 'b', -1: 'r'}
+            if d != 0:
+                plt.scatter(x[T, i], d, s=1, c = l[d])
+
+        for _ in range(m):
+            for (i, _) in enumerate(distr[T]):
+                distr[T, i] = (distr[T, i] + distr[T, i-1])/2
+
+        val = float(np.max(abs(distr[T])))
+        plt.scatter(x[T], distr[T], c=distr[T], s=1, cmap='RdYlBu', vmin=-val, vmax=val)
+        plt.plot(x[T], np.zeros(x[T].shape), ls='--', c='lightgray')
+
+        plt.ylim(-1.1, 1.1)
+        plt.title(f'Spatial distribution of particles at N = {T} for c = {simul.c}')
+        plt.xlabel('Position')
+        plt.ylabel('State')
+        plt.legend()
+        if savefig: plt.savefig(f'distr2d_N{T}_c{simul.c}.pdf', bbox_inches='tight')
+        plt.show()
+    elif proj == '3d':
+        fig = plt.figure(figsize=(7, 7))
+        ax = fig.add_subplot(projection='3d')
+
+        for t in range(T):
+            for _ in range(m):
+                for (i, _) in enumerate(distr[t]):
+                    distr[t, i] = (distr[t, i] + distr[t, i-1])/2
+            
+            ax.scatter3D([t]*np.size(x[t]), x[t], distr[t], c=distr[t], s=0.5, cmap='RdYlBu')
+        
+        ax.dist = 11
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Position')
+        ax.set_zlabel('State')
+        plt.title(f'Spatial distribution of particles between\nN = 0 and N = {T} for c = {simul.c}')
+        if savefig: plt.savefig(f'distr3d_N{T}_c{simul.c}.pdf', bbox_inches='tight')
+        plt.show()

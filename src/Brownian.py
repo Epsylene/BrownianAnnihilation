@@ -32,6 +32,10 @@ class Brownian:
         self.x = np.ma.ones((self.N, n))*np.nan
         self.x[0] = np.random.choice(np.linspace(-L, L, 2*n+1), size=n, replace=False)
 
+        self.space = np.zeros((N, 2*n+1))
+        self.space[::2] = np.linspace(-L, L, 2*n+1)
+        self.space[1::2] = np.linspace(-L-0.5, L-0.5, 2*n+1)
+
         # Assign a number of particle and antiparticle state
         n_p = int(n*c)
         n_a = n - n_p
