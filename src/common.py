@@ -44,7 +44,7 @@ def end_state(simul, params, n_exp):
 
     Args:
         simul: Brownian, Ballistic
-            The type of simulation to perform.
+            The type of simulation to run.
         params: array with 2 tuples
             The simulations parameters. The first tuple is
             expected to contain the initial numbers of particles
@@ -84,10 +84,28 @@ def end_state(simul, params, n_exp):
     plt.show()
 
 def avg_concentration(simul, params, n_exp):
+    '''
+    Plot an average concentration for a given simulation over a
+    number of experiments.
 
+    Args:
+        simul: Brownian, Ballistic
+            The type of simulation to run.
+        params: tuple
+            Tuple containing the simulation parameters. The
+            tuple (1000, 0.5) would define a Brownian simulation
+            with 1000 initial particles and an initial
+            concentration of 0.5, for example.
+        n_exp: int
+            The number of experiments over which to average the
+            simulation.
+    '''
     n0, c0, *targs = params
     N = targs[0] if targs else 100
 
+    # Calculate and plot the concentrations for the provided
+    # simulation type and parameters over the number of
+    # experiments...
     t = np.arange(N)
     c = np.zeros((n_exp, N))
     for i in range(n_exp):
@@ -95,6 +113,7 @@ def avg_concentration(simul, params, n_exp):
         c[i] = concentration(b)
         plt.plot(t, c[i], lw=0.5)
 
+    # ...then plot the average curve.
     c = np.average(c, axis=0)
     plt.plot(c, c='k')
 
@@ -106,17 +125,43 @@ def avg_concentration(simul, params, n_exp):
     return c
 
 def fit(concentration, recursion=1000):
+    '''
+    Fit function to find the alpha coefficient of the
+    concentration. The fit function is a + b/(t+c)**d, of which
+    each parameter is then printed. A R^2 test is also performed
+    to measure the goodness of the fit.
+
+    Args:
+        concentration: array
+            The concentration array to fit, as returned by
+            `concentration()` or `avg_concentration()`.
+        recursion: int
+            The maximum number of recursion steps taken by the
+            fit function (scipy's curve_fit() `maxfev`
+            argument). This is provided only for the cases where
+            the fit function fails; it is however recommended to
+            rather run the simulation and the fit function again
+            than increasing the argument until the fit function
+            works (very high recursion values may not make the
+            function return an error, but will not give a better
+            fit curve). Default 1000 (scipy's default).
+    '''
     t = np.arange(len(concentration))
     c_model = lambda t, a, b, c, d: a + b/(t+c)**d
 
+    # Fit the concentration array using the provided function,
+    # and calculate the R^2 value, which measures the goodness
+    # of the fit.
     args, _ = scp.curve_fit(c_model, t, concentration, maxfev=recursion)
     fit = c_model(t, *args)
     r2 = 1 - np.sum((concentration - fit)**2)/np.sum((concentration - np.average(concentration))**2)
 
+    # Print the calculated fit parameters and the R^2 test value
     print('Concentration fit a+b/(t+c)^d, with:')
     print('a = {}, b = {},\nc = {}, d = {}'.format(*args))
     print(f'R^2 = {r2}')
 
+    # Plot the concentration and the concentration fit
     plt.scatter(t, concentration, c='k', s=1, label='Simulation')
     plt.plot(t, fit, label='Fit')
 
@@ -131,6 +176,38 @@ def fit(concentration, recursion=1000):
     return args[3]
 
 def distribution(simul, m=None, T=None, proj='2d', savefig=False):
+    '''
+    Compute the average spatial distribution of particles over
+    time as a state-position plot. The "average state" at each
+    point is a number between -1 and 1, computed as the
+    neighbor-by-neighbor average at that point between "particle
+    state" (1), "antiparticle state" (-1) and "vacuum state"
+    (0).
+
+    Args:
+        simul: Brownian, Ballistic object
+            A pre-computed simulation.
+        m: int
+            The number of steps for the averaging function. The
+            bigger it is, the smoother the state-position curve
+            will be, but also closer to 0. Default 50 for 2D
+            projection and 10 for 3D projection.
+        T: int
+            The simulation step at which (if 2D projection is
+            chosen) or up to which (3D projection) the
+            distribution is calculated. Default the last step of
+            the simulation.
+        proj: '2d', '3d'
+            If 2D, plot the average state of each point of the
+            box at the time step T. The actual particles and
+            antiparticles are also plotted on top and bottom, to
+            better visualise the average state curve. If 3D,
+            plot the average state of each point of the box
+            between 0 and T. Default 2D.
+        savefig: bool
+            If True, save the plot figure on a PDF file with a
+            name corresponding to the function parameters.
+    '''
     n, N, L = simul.n, simul.N, simul.L
     if T == None: T = simul.N-2
     if m == None: m = 50 if proj == '2d' else 10
@@ -139,25 +216,47 @@ def distribution(simul, m=None, T=None, proj='2d', savefig=False):
     distr = np.zeros(x.shape)
     part = simul.particles
 
+    # Position the particle and anti-particle states on the box
+    # space array
     for t in range(T+1):
         for (i, xi) in enumerate(simul.x[t]):
+            # Because the box space and the particles positions
+            # arrays are of different sizes, we have to check
+            # which points are the same in each...
             idx = np.where(abs(x[t] - xi) < 0.001)
+            # ...and at those indices write the particle and
+            # anti-particle states (everywhere else is the vacuum,
+            # which is 0 state).
             distr[t, idx] = part[i]
 
     if proj == '2d':
+        # In order to write the labels only once
         plt.scatter(np.nan, np.nan, c='b', s=1, label='Particles')
         plt.scatter(np.nan, np.nan, c='r', s=1, label='Anti-particles')
+        
+        # Plot the actual particles and anti-particles, in blue
+        # and red, correspondingly
         for (i, d) in enumerate(distr[T]):
             l = {1: 'b', -1: 'r'}
             if d != 0:
                 plt.scatter(x[T, i], d, s=1, c = l[d])
 
+        # Averaging the distribution: take a point, average its
+        # state with its left neighbor, and repeat the operation
+        # for each point `m` times.
         for _ in range(m):
             for (i, _) in enumerate(distr[T]):
                 distr[T, i] = (distr[T, i] + distr[T, i-1])/2
 
-        val = float(np.max(abs(distr[T])))
-        plt.scatter(x[T], distr[T], c=distr[T], s=1, cmap='RdYlBu', vmin=-val, vmax=val)
+        # Plot the distribution as a state-position scatter
+        # curve, with a red-blue gradient colormap ranging from
+        # the distribution's greatest point (in absolute value)
+        # to its opposite (so that values above 0 are mostly
+        # blue --particle-like-- and values below 0 are mostly
+        # red --anti-particle-like--).
+        distr_range = float(np.max(abs(distr[T])))
+        plt.scatter(x[T], distr[T], c=distr[T], s=1, cmap='RdYlBu', vmin=-distr_range, vmax=distr_range)
+        # Plot a dashed gray line at 0, as a reference point.
         plt.plot(x[T], np.zeros(x[T].shape), ls='--', c='lightgray')
 
         plt.ylim(-1.1, 1.1)
@@ -171,6 +270,8 @@ def distribution(simul, m=None, T=None, proj='2d', savefig=False):
         fig = plt.figure(figsize=(7, 7))
         ax = fig.add_subplot(projection='3d')
 
+        # Average the distribution over time in the [0, T[
+        # range.
         for t in range(T):
             for _ in range(m):
                 for (i, _) in enumerate(distr[t]):
