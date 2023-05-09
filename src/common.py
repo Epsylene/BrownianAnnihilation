@@ -83,7 +83,7 @@ def end_state(simul, params, n_exp):
 
     plt.show()
 
-def avg_concentration(simul, params, n_exp):
+def avg_concentration(simul, params, n_exp, savefig=False):
     '''
     Plot an average concentration for a given simulation over a
     number of experiments.
@@ -99,6 +99,8 @@ def avg_concentration(simul, params, n_exp):
         n_exp: int
             The number of experiments over which to average the
             simulation.
+        savefig: bool
+            Save the figure as an adequately named PDF file.
     '''
     n0, c0, *targs = params
     N = targs[0] if targs else 100
@@ -120,11 +122,12 @@ def avg_concentration(simul, params, n_exp):
     plt.title(f'Average concentration over {n_exp}\n'+rf'experiments with $n_0 = {n0}$, $c_0 = {c0}$')
     plt.xlabel('Time')
     plt.ylabel('Concentration')
+    if savefig: plt.savefig(f'avgc_n0{n0}_c0{c0}_nexp{n_exp}.pdf', bbox_inches='tight')
     plt.show()
 
     return c
 
-def fit(concentration, recursion=1000):
+def fit(concentration, recursion=1000, savefig=False):
     '''
     Fit function to find the alpha coefficient of the
     concentration. The fit function is a + b/(t+c)**d, of which
@@ -155,6 +158,7 @@ def fit(concentration, recursion=1000):
     args, _ = scp.curve_fit(c_model, t, concentration, maxfev=recursion)
     fit = c_model(t, *args)
     r2 = 1 - np.sum((concentration - fit)**2)/np.sum((concentration - np.average(concentration))**2)
+    alpha = args[3]
 
     # Print the calculated fit parameters and the R^2 test value
     print('Concentration fit a+b/(t+c)^d, with:')
@@ -166,14 +170,15 @@ def fit(concentration, recursion=1000):
     plt.plot(t, fit, label='Fit')
 
     s = '-' if args[1] < 0 else ''
-    plt.title(rf'Concentration fit, {s}$1/t^\alpha$ with $\alpha = {args[3]:.2f}$')
+    plt.title(rf'Concentration fit, {s}$1/t^\alpha$ with $\alpha = {alpha:.2f}$')
     plt.xlabel('Time')
     plt.ylabel('Concentration')
     plt.legend()
 
+    if savefig: plt.savefig(f'fit_a{alpha}.pdf', bbox_inches='tight')
     plt.show()
 
-    return args[3]
+    return fit, alpha
 
 def distribution(simul, m=None, T=None, proj='2d', savefig=False):
     '''
