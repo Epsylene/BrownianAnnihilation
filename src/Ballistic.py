@@ -18,9 +18,13 @@ class Ballistic:
                 The initial concentration of particles, between
                 0 and 1 (for example, c=0.3 means that there are
                 30 particles out of a total of a hundred)
+            N: int
+                Number of steps for the simulation. Default 100.
             L: float
                 The size of the simulation box in which the
-                particles live. Default 1.
+                particles live. Note that it should be made
+                bigger as the number of particles increases to
+                avoid floating point errors. Default 1.
             v: tuple
                 A tuple containing a string (either 'set' or
                 'gaussian') and a float v0. In the 'set' case,
@@ -28,8 +32,6 @@ class Ballistic:
                 0, v0}; in the 'gaussian' case, it is a random
                 value in a normal distribution with mean v0.
                 Default ('set', 1).
-            N: int
-                Number of steps for the simulation. Default 100.
             bounded: bool
                 Whether the simulation particles are bound
                 inside the [0, L] box or not. Default True.
@@ -39,10 +41,7 @@ class Ballistic:
         self.N = N # number of time steps
 
         self.dt = 1/500 # time step interval
-        self.L = L*(1 + n/500) # box size (made bigger as the 
-            # number of particles increases to avoid floating
-            # point issues when placing too much particles in a
-            # box that is too small)
+        self.L = L # box size
 
         vtype, v0 = v
         if vtype == 'set':
