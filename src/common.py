@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize as scp
 
-def concentration(simul, plot=False):
+def concentration(simul, plot=None):
         '''
         Return and eventually plot the concentration (as in
         density) of particles in the given simulation over time.
@@ -10,11 +10,14 @@ def concentration(simul, plot=False):
         Args:
             simul: Brownian, Ballistic
                 The simulation.
-            plot: bool
-                If True, plot the concentration between its
-                minimum and maximum values. Default False.
+            plot: string
+                If 'curve', plot the concentration as a function
+                of time. If 'log', plot the concentration as a
+                function of time on a log-log scale. Default
+                None.
         '''
         N = simul.N
+        concentration = np.zeros(N)
 
         # Indices of the particles
         p_idx = np.where(simul.particles == 1)[0]
@@ -22,19 +25,21 @@ def concentration(simul, plot=False):
 
         # The concentration of particles over time is the number
         # particles divided by the size of the box.
-        density = np.zeros(N)
         for t in range(N):
-            density[t] = np.ma.count(x[t, p_idx])/simul.L
+            concentration[t] = np.ma.count(x[t, p_idx])/simul.L
+
+        if plot == 'curve': plt.plot(concentration, c='b')
+        elif plot == 'log': plt.loglog(concentration, c='b')
 
         if plot:
-            plt.plot(range(N), density)
-
-            plt.title(rf'Density of particles over time ($n_0 = {simul.n}$, $c_0 = {simul.c}$)')
+            plt_type = 'logarithmic, ' if plot == 'log' else ''
+            plt.title('Density of particles over time\n'
+                    + rf'({plt_type}$n_0 = {simul.n}$, $c_0 = {simul.c}$)')
             plt.xlabel('Time')
             plt.ylabel('Concentration')
             plt.show()
 
-        return density
+        return concentration
 
 def end_state(simul, params, n_exp):
     '''
@@ -83,7 +88,7 @@ def end_state(simul, params, n_exp):
 
     plt.show()
 
-def avg_concentration(simul, params, n_exp, savefig=False):
+def avg_concentration(simul, params, n_exp, plot=None, savefig=False):
     '''
     Plot an average concentration for a given simulation over a
     number of experiments.
@@ -105,78 +110,82 @@ def avg_concentration(simul, params, n_exp, savefig=False):
     n0, c0, *targs = params
     N = targs[0] if targs else 100
 
-    # Calculate and plot the concentrations for the provided
-    # simulation type and parameters over the number of
-    # experiments...
+    # Compute concentrations for the provided simulation type
+    # and parameters over the number of experiments
     t = np.arange(N)
     c = np.zeros((n_exp, N))
     for i in range(n_exp):
         b = simul(*params)
         c[i] = concentration(b)
-        plt.plot(t, c[i], lw=0.5)
+    avg_c = np.average(c, axis=0)
 
-    # ...then plot the average curve.
-    c = np.average(c, axis=0)
-    plt.plot(c, c='k')
+    # Plot the concentrations and the average curve
+    if plot == 'curve':
+        for ci in c: plt.plot(ci, lw=0.5)
+        plt.plot(avg_c, c='k')
+    elif plot == 'log':
+        for ci in c: plt.loglog(ci, lw=0.5)
+        plt.loglog(avg_c, c='k')
 
-    plt.title(f'Average concentration over {n_exp}\n'+rf'experiments with $n_0 = {n0}$, $c_0 = {c0}$')
-    plt.xlabel('Time')
-    plt.ylabel('Concentration')
-    if savefig: plt.savefig(f'avgc_n0{n0}_c0{c0}_nexp{n_exp}.pdf', bbox_inches='tight')
-    plt.show()
+    if plot:
+        plt.title(f'Average concentration over {n_exp}\n'+rf'experiments with $n_0 = {n0}$, $c_0 = {c0}$')
+        plt.xlabel('Time')
+        plt.ylabel('Concentration')
+        if savefig: plt.savefig(f'avgc_n0{n0}_c0{c0}_nexp{n_exp}.pdf', bbox_inches='tight')
+        plt.show()
 
-    return c
+    return avg_c, c
 
-def fit(concentration, recursion=1000, savefig=False):
+def fit(concentration, plot=None, savefig=False):
     '''
     Fit function to find the alpha coefficient of the
     concentration. The fit function is a + b/(t+c)**d, of which
-    each parameter is then printed. A R^2 test is also performed
-    to measure the goodness of the fit.
+    each parameter can then printed. A R^2 test is also
+    performed to measure the goodness of the fit.
 
     Args:
         concentration: array
             The concentration array to fit, as returned by
             `concentration()` or `avg_concentration()`.
-        recursion: int
-            The maximum number of recursion steps taken by the
-            fit function (scipy's curve_fit() `maxfev`
-            argument). This is provided only for the cases where
-            the fit function fails; it is however recommended to
-            rather run the simulation and the fit function again
-            than increasing the argument until the fit function
-            works (very high recursion values may not make the
-            function return an error, but will not give a better
-            fit curve). Default 1000 (scipy's default).
+        plot: string
+            If 'print', print the fit parameters, R^2 and alpha.
+            If 'curve', plot the concentration curve and fit. If
+            'log', plot the concentration curve and fit on a
+            log-log scale. Default None.
     '''
     t = np.arange(len(concentration))
     c_model = lambda t, a, b, c, d: a + b/(t+c)**d
 
     # Fit the concentration array using the provided function,
     # and calculate the R^2 value, which measures the goodness
-    # of the fit.
-    args, _ = scp.curve_fit(c_model, t, concentration, maxfev=recursion)
+    # of the fit. Bounds are provided for the d parameter
+    # (alpha) to get a better fit.
+    args, _ = scp.curve_fit(c_model, t, concentration, bounds=((-np.inf, -np.inf, -np.inf, 0), (np.inf, np.inf, np.inf, 10)))
     fit = c_model(t, *args)
     r2 = 1 - np.sum((concentration - fit)**2)/np.sum((concentration - np.average(concentration))**2)
     alpha = args[3]
 
-    # Print the calculated fit parameters and the R^2 test value
-    print('Concentration fit a+b/(t+c)^d, with:')
-    print('a = {}, b = {},\nc = {}, d = {}'.format(*args))
-    print(f'R^2 = {r2}')
+    if plot == 'print':
+        # Print the calculated fit parameters and the R^2 test value
+        print('Concentration fit a+b/(t+c)^d, with:')
+        print('a = {}, b = {},\nc = {}, d = {}'.format(*args))
+        print(f'R^2 = {r2}')
+    elif plot == 'curve':
+        # Plot the concentration and the concentration fit
+        plt.scatter(t, concentration, c='k', s=1, label='Simulation')
+        plt.plot(t, fit, label='Fit')
+    elif plot == 'log':
+        plt.loglog(concentration, c='b', label='Simulation')
+        plt.loglog(fit, ls='--', c='k', label='Fit')
 
-    # Plot the concentration and the concentration fit
-    plt.scatter(t, concentration, c='k', s=1, label='Simulation')
-    plt.plot(t, fit, label='Fit')
+    if plot:
+        plt.title(rf'Concentration fit, $1/t^\alpha$ with $\alpha = {alpha:.2f}$')
+        plt.xlabel('Time')
+        plt.ylabel('Concentration')
+        plt.legend()
 
-    s = '-' if args[1] < 0 else ''
-    plt.title(rf'Concentration fit, {s}$1/t^\alpha$ with $\alpha = {alpha:.2f}$')
-    plt.xlabel('Time')
-    plt.ylabel('Concentration')
-    plt.legend()
-
-    if savefig: plt.savefig(f'fit_a{alpha}.pdf', bbox_inches='tight')
-    plt.show()
+        if savefig: plt.savefig(f'fit_a{alpha}.pdf', bbox_inches='tight')
+        plt.show()
 
     return fit, alpha
 
