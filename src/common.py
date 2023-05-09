@@ -148,10 +148,12 @@ def fit(concentration, plot=None, savefig=False):
     alpha = args[3]
 
     if plot == 'print':
-        # Print the calculated fit parameters and the R^2 test value
+        # Print the calculated fit parameters and the R^2 test
+        # value
         print('Concentration fit a+b/(t+c)^d, with:')
         print('a = {}, b = {},\nc = {}, d = {}'.format(*args))
         print(f'R^2 = {r2}')
+        print(f'alpha = {alpha:.2f}')
     elif plot == 'curve':
         # Plot the concentration and the concentration fit
         plt.scatter(t, concentration, c='k', s=1, label='Simulation')
@@ -160,7 +162,7 @@ def fit(concentration, plot=None, savefig=False):
         plt.loglog(concentration, c='b', label='Simulation')
         plt.loglog(fit, ls='--', c='k', label='Fit')
 
-    if plot != 'print':
+    if plot and plot != 'print':
         plt.title(rf'Concentration fit, $1/t^\alpha$ with $\alpha = {alpha:.2f}$')
         plt.xlabel('Time')
         plt.ylabel('Concentration')
@@ -231,6 +233,52 @@ def avg_fit(simul, params, n_exp, plot=None, savefig=False):
         plt.show()
 
     return f, a
+
+def alpha(simul, params, nc, savefig=False):
+    '''
+    Plot alpha exponent values as a function of the initial
+    concentration over the range [0, 1] with nc points and the
+    given simulation parameters.
+
+    Args:
+        simul: Brownian, Ballistic
+            The type of simulation.
+        params: tuple
+            The tuple of parameters, where the first element is
+            the number of particles of the simulation and the
+            second element the number of time steps of the
+            simulation.
+        nc: int
+            The number of points in the range [0, 1] of initial
+            concentrations over which to calculate the alpha
+            values.
+        savefig: bool
+            Save the figure in an adequately named PDF file.
+    '''
+    n0, N = params
+    xc = np.linspace(0, 1, nc)
+    alpha = np.zeros(nc)
+
+    for (i, c0) in enumerate(xc):
+        c = concentration(simul(n0, c0, N))
+        _, a = fit(c)
+        alpha[i] = a
+
+    # Plot the alpha values at each concentration
+    plt.plot(xc, alpha, marker='o', c='b', lw=1, markersize=3)
+
+    # Fit with a quadratic function
+    model = lambda x, a, b, c, d: a + b*(c*x + d)**2
+    args, _ = scp.curve_fit(model, xc, alpha)
+    fitted = model(xc, *args)
+    plt.plot(xc, fitted, ls='--', color='k', lw=1)
+
+    plt.xlabel('Concentration')
+    plt.ylabel(r'$\alpha$')
+    plt.title(r'$\alpha$ exponent value as a function of the concentration')
+    
+    if savefig: plt.savefig('brown_alpha_ctr.pdf')
+    plt.show()
 
 def end_state(simul, params, n_exp):
     '''
