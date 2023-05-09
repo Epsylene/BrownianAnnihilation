@@ -17,6 +17,10 @@ def concentration(simul, plot=None, savefig=False):
                 None.
             savefig: bool
                 Save the figure in an adequately named PDF file.
+
+        Returns:
+            concentration: array
+                The array of concentration values over time.
         '''
         N = simul.N
         concentration = np.zeros(N)
@@ -45,53 +49,6 @@ def concentration(simul, plot=None, savefig=False):
 
         return concentration
 
-def end_state(simul, params, n_exp):
-    '''
-    Plots the average final concentrations for a given type of
-    simulation over a number of experiments with different
-    parameters.
-
-    Args:
-        simul: Brownian, Ballistic
-            The type of simulation to run.
-        params: array with 2 tuples
-            The simulations parameters. The first tuple is
-            expected to contain the initial numbers of particles
-            and the second the initial concentrations. An
-            example input is [(5, 10, 20), (0.2, 0.8)].
-        n_exp: int
-            The number of experiments to perform for each pair
-            of parameters.
-    '''
-    n, c = params
-    concentrations = np.zeros((len(c), len(n), n_exp))
-
-    # For each pair (n0, c0) (initial number of particles and
-    # concentration), repeatedly create a simulation and
-    # calculate the end concentration (non-annihilated particles
-    # over all non-annihilated)
-    for (i, c0) in enumerate(c):
-        for (j, n0) in enumerate(n):
-            for k in range(n_exp):
-                b = simul(n0, c0)
-                all = np.ma.array(b.particles, mask=b.annihilated[b.N - 1])
-                particles = np.where(all == 1)
-                concentrations[i, j, k] = np.size(particles)/np.ma.count(all)
-    
-    # Average the concentrations over 
-    n0_labels = [rf'$n_0 = {n0}$' for n0 in n]
-    avg_c = [[np.average(c_n) for c_n in c] for c in concentrations]
-
-    # Display a bar chart of the 
-    x = np.arange(len(n0_labels))
-    for (i, c0) in enumerate(c):
-        plt.bar(x + 0.3*i, avg_c[i], width=0.3, label=rf'$c_0$ = {c0}')
-    plt.xticks(x + 0.15, n0_labels)
-    plt.title(f'Average final concentration over {n_exp} experiments\nwith different initial populations and concentrations')
-    plt.legend()
-
-    plt.show()
-
 def avg_concentration(simul, params, n_exp, plot=None, savefig=False):
     '''
     Plot an average concentration for a given simulation over a
@@ -116,6 +73,12 @@ def avg_concentration(simul, params, n_exp, plot=None, savefig=False):
         savefig: bool
             Save the figure as an adequately named PDF file.
             Default False.
+    
+    Returns:
+        avg_c: array
+            Average concentration array.
+        c: array
+            Array of each experiment's concentration array.
     '''
     n0, c0, *targs = params
     N = targs[0] if targs else 100
@@ -165,6 +128,12 @@ def fit(concentration, plot=None, savefig=False):
         savefig: bool
             Save the figure in an adequately named PDF file.
             Default False.
+    
+    Returns:
+        fit: array
+            The array of fitted values.
+        alpha: float
+            The alpha exponent of the fit.
     '''
     t = np.arange(len(concentration))
     c_model = lambda t, a, b, c, d: a + b/(t+c)**d
@@ -191,7 +160,7 @@ def fit(concentration, plot=None, savefig=False):
         plt.loglog(concentration, c='b', label='Simulation')
         plt.loglog(fit, ls='--', c='k', label='Fit')
 
-    if plot:
+    if plot != 'print':
         plt.title(rf'Concentration fit, $1/t^\alpha$ with $\alpha = {alpha:.2f}$')
         plt.xlabel('Time')
         plt.ylabel('Concentration')
@@ -201,6 +170,114 @@ def fit(concentration, plot=None, savefig=False):
         plt.show()
 
     return fit, alpha
+
+def avg_fit(simul, params, n_exp, plot=None, savefig=False):
+    '''
+    Fit the average concentration over a number of experiments
+    of the simulation with the given parameters.
+
+    Args:
+        simul: Brownian, Ballistic
+            The type of the simulation to run.
+        params: tuple
+            Tuple containing the simulation parameters. The
+            tuple (1000, 0.5) would define a Brownian simulation
+            with 1000 initial particles and an initial
+            concentration of 0.5, for example.
+        n_exp: int
+            The number of experiments over which to average the
+            simulation.
+        plot: string
+            If 'curve', plot the concentrations and the fit of
+            the average concentration. If 'log', plot the
+            concentrations and the fit of the average
+            concentration in a log-log scale. If 'lin', plot the
+            concentrations and a linear fit of the average
+            concentration on a log-log scale.
+        savefig: bool
+            Save the figure in an adequately named PDF file.
+            Default False.
+
+    Returns:
+        fit: array
+            The average concentration fit.
+        alpha: float
+            The alpha exponent of the fit.
+    '''
+    n0, c0, *_ = params
+    avg_c, c = avg_concentration(simul, params, n_exp)
+    f, a = fit(avg_c)
+    
+    if plot == 'curve':
+        plt.plot(list(zip(*c)), lw=0.5)
+        plt.plot(f, ls='--', c='k', label=rf'Fit, $\alpha = {a:.2f}$')
+    elif plot == 'log':
+        plt.loglog(list(zip(*c)), lw=0.5)
+        plt.loglog(f, ls='--', c='k', label=rf'Fit, $\alpha = {a:.2f}$')
+    elif plot == 'lin':
+        x = np.arange(np.size(avg_c))
+        x[0] = 1
+        coef = np.polyfit(np.log(x), np.log(avg_c), 1)
+        poly1d = np.poly1d(coef)
+        a = -coef[0]
+
+        plt.loglog(list(zip(*c)), lw=0.5)
+        plt.loglog(x, np.exp(poly1d(np.log(x))), ls='--', c='k', label=rf'Fit, $\alpha = {a:.2f}$')
+
+    if plot:
+        plt.title(f'Average concentration fit over {n_exp}\n'+rf'experiments with $n_0 = {n0}$, $c_0 = {c0}$')
+        plt.legend()
+        if savefig: plt.savefig('')
+        plt.show()
+
+    return f, a
+
+def end_state(simul, params, n_exp):
+    '''
+    Plots the average final concentrations for a given type of
+    simulation over a number of experiments with different
+    parameters.
+
+    Args:
+        simul: Brownian, Ballistic
+            The type of simulation to run.
+        params: array with 2 tuples
+            The simulations parameters. The first tuple is
+            expected to contain the initial numbers of particles
+            and the second the initial concentrations. An
+            example input is [(5, 10, 20), (0.2, 0.8)].
+        n_exp: int
+            The number of experiments to perform for each pair
+            of parameters.
+    '''
+    n, c = params
+    concentrations = np.zeros((len(c), len(n), n_exp))
+
+    # For each pair (n0, c0) (initial number of particles and
+    # concentration), repeatedly create a simulation and
+    # calculate the end concentration (non-annihilated particles
+    # over all non-annihilated)
+    for (i, c0) in enumerate(c):
+        for (j, n0) in enumerate(n):
+            for k in range(n_exp):
+                b = simul(n0, c0)
+                all = np.ma.array(b.particles, mask=b.annihilated[b.N - 1])
+                particles = np.where(all == 1)
+                concentrations[i, j, k] = np.size(particles)/np.ma.count(all)
+    
+    # Average the concentrations over 
+    n0_labels = [rf'$n_0 = {n0}$' for n0 in n]
+    avg_c = [[np.average(c_n) for c_n in c] for c in concentrations]
+
+    # Display a bar chart of the 
+    x = np.arange(len(n0_labels))
+    for (i, c0) in enumerate(c):
+        plt.bar(x + 0.3*i, avg_c[i], width=0.3, label=rf'$c_0$ = {c0}')
+    plt.xticks(x + 0.15, n0_labels)
+    plt.title(f'Average final concentration over {n_exp} experiments\nwith different initial populations and concentrations')
+    plt.legend()
+
+    plt.show()
 
 def distribution(simul, m=None, T=None, plot='2d', savefig=False):
     '''
@@ -236,6 +313,10 @@ def distribution(simul, m=None, T=None, plot='2d', savefig=False):
             If True, save the plot figure in an adequately named
             PDF file. Note that this can be quite slow for the
             3D plot.
+
+    Returns:
+        distr: array
+            The averaged spatial distribution array.
     '''
     n, N, L = simul.n, simul.N, simul.L
     if T == None: T = simul.N-2
@@ -315,3 +396,5 @@ def distribution(simul, m=None, T=None, plot='2d', savefig=False):
         plt.title(f'Spatial distribution of particles between\nN = 0 and N = {T} for c = {simul.c}')
         if savefig: plt.savefig(f'distr3d_N{T}_c{simul.c}.png', bbox_inches='tight')
         plt.show()
+
+    return distr
