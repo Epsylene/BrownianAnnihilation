@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class Brownian:
-    def __init__(self, n, c, N=100):
+    def __init__(self, n, c, N=100, bounded=False):
         '''
         Brownian simulation constructor. The particles are set
         at random places along an axis with 2n+1 uniformly
@@ -20,6 +20,10 @@ class Brownian:
                 30 particles out of a total of a hundred)
             N: int
                 Number of steps for the simulation. Default 100.
+            bounded: bool
+                Whether to bound-check the particles inside the
+                box. Note that the time-position plot does not
+                work well with this option.
         '''
         self.n = n # number of particles
         self.c = c # initial proportion of particles
@@ -41,9 +45,9 @@ class Brownian:
         n_a = n - n_p
         self.particles = np.concatenate((-1*np.ones(n_a), 1*np.ones(n_p)))
 
-        self.compute()
+        self.compute(bounded)
 
-    def compute(self):
+    def compute(self, bounded):
         '''
         Simulation runner. At each time step, the positions at
         which lie the particles are checked to see if there two
@@ -92,12 +96,18 @@ class Brownian:
                     annihilated[t+1:, e] = 1
                     e = e[np.where(particles[e] == -1)][0]
                     annihilated[t+1:, e] = 0
+            
+            if bounded:
+                out_up = np.where(x[t] > L)
+                out_down = np.where(x[t] < -L)
+                x[t, out_up] -= 2*L
+                x[t, out_down] += 2*L
 
             # All remaining particles are then moved by dx[t]
             alive = (annihilated[t+1] == 0)
             x[t+1, alive] = x[t, alive] + dx[t, alive]
 
-    def plot(self, adaptative=False):
+    def plot(self, adaptative=False, savefig=False):
         '''
         Plot the trajectories of the particles as time-position
         lines, drawn on a grid that represents the simulation
@@ -121,7 +131,7 @@ class Brownian:
         if adaptative: plt.figure(figsize=(7/100*N, 1/5*n))
         
         # Plot the grid lines
-        kwargs = {'color': 'k', 'ls': '--', 'lw': 0.2}
+        kwargs = {'color': 'gray', 'ls': '--', 'lw': 0.2}
         if n < 100 or adaptative:
             for i in np.linspace(-L, L, 2*n+1):
                 plt.axline((0, i), slope=1/2, **kwargs)
@@ -146,4 +156,5 @@ class Brownian:
         plt.xlabel('Time')
         plt.ylabel('Position')
 
+        if savefig: plt.savefig(f'plot_brown_n{n}_N{N}_c{self.c}.pdf', bbox_inches='tight')
         plt.show()
