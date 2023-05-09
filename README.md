@@ -14,3 +14,21 @@ We use here two approaches to model diffusion-reaction processes in 1D, where me
 
 1. **Ballistic annihilation**: particles start with random positions and velocities along an axis, and are simulated assuming elastic collisions;
 2. **Brownian annihilation**: particles move with constant randomly negative or positive increments on a lattice (Brownian walk).
+
+## Code description
+
+There are 2 main classes, `Brownian` and `Ballistic`, corresponding to the 2 types of simulation. Each has a constructor, taking in and setting up the parameters of the simulation, a `compute()` method (automatically called when creating the simulation object) that runs the simulation over the number of time steps given, and a `plot()` function, to create a time-position plot of the particle trajectories.
+
+The file `common.py` contains the following methods to compute or plot several objects of interest:
+
+- `concentration()`: compute and plot the concentration of particles over time.
+- `avg_concentration()`: compute and plot a concentration averaged over a number of experiments for a given simulation.
+- `fit()`: fit concentration data and return the corresponding $t^{1/\alpha}$ function exponent.
+- `avg_fit()`: fit the average concentration.
+- `alpha()`: plot the value of alpha as a function of the initial particle ratio.
+- `end_state()`: plot the average final concentration over a number of experiments for a given simulation.
+- `distribution()`: plot the averaged spatial distribution of particle states.
+
+## Requirements and execution
+
+It is required to have Python 3 to run the code, and Jupyter Notebook to run the notebooks, which contain some code examples and explications. The necessary packages are listed in the `requirements.txt` file.
