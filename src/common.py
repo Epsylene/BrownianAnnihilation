@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize as scp
 
-def concentration(simul, plot=None):
+def concentration(simul, plot=None, savefig=False):
         '''
         Return and eventually plot the concentration (as in
         density) of particles in the given simulation over time.
@@ -15,6 +15,8 @@ def concentration(simul, plot=None):
                 of time. If 'log', plot the concentration as a
                 function of time on a log-log scale. Default
                 None.
+            savefig: bool
+                Save the figure in an adequately named PDF file.
         '''
         N = simul.N
         concentration = np.zeros(N)
@@ -37,6 +39,8 @@ def concentration(simul, plot=None):
                     + rf'({plt_type}$n_0 = {simul.n}$, $c_0 = {simul.c}$)')
             plt.xlabel('Time')
             plt.ylabel('Concentration')
+
+            if savefig: plt.savefig(f'ctr_n{simul.n}_c{simul.c}_N{simul.N}.pdf', bbox_inches='tight')
             plt.show()
 
         return concentration
@@ -104,8 +108,14 @@ def avg_concentration(simul, params, n_exp, plot=None, savefig=False):
         n_exp: int
             The number of experiments over which to average the
             simulation.
+        plot: string
+            If 'curve', plot the concentration and average
+            concentration curves. If 'log', plot the
+            concentration and average concentration on a log-log
+            scale. Default None.
         savefig: bool
             Save the figure as an adequately named PDF file.
+            Default False.
     '''
     n0, c0, *targs = params
     N = targs[0] if targs else 100
@@ -152,6 +162,9 @@ def fit(concentration, plot=None, savefig=False):
             If 'curve', plot the concentration curve and fit. If
             'log', plot the concentration curve and fit on a
             log-log scale. Default None.
+        savefig: bool
+            Save the figure in an adequately named PDF file.
+            Default False.
     '''
     t = np.arange(len(concentration))
     c_model = lambda t, a, b, c, d: a + b/(t+c)**d
@@ -189,10 +202,10 @@ def fit(concentration, plot=None, savefig=False):
 
     return fit, alpha
 
-def distribution(simul, m=None, T=None, proj='2d', savefig=False):
+def distribution(simul, m=None, T=None, plot='2d', savefig=False):
     '''
     Compute the average spatial distribution of particles over
-    time as a state-position plot. The "average state" at each
+    time as a position-state plot. The "average state" at each
     point is a number between -1 and 1, computed as the
     neighbor-by-neighbor average at that point between "particle
     state" (1), "antiparticle state" (-1) and "vacuum state"
@@ -202,16 +215,17 @@ def distribution(simul, m=None, T=None, proj='2d', savefig=False):
         simul: Brownian, Ballistic object
             A pre-computed simulation.
         m: int
-            The number of steps for the averaging function. The
-            bigger it is, the smoother the state-position curve
-            will be, but also closer to 0. Default 50 for 2D
-            projection and 10 for 3D projection.
+            The number of recursion steps for the averaging
+            function. The bigger it is, the smoother the
+            position-state curve will be, but also closer to 0.
+            Default 50 for 2D projection and 10 for 3D
+            projection.
         T: int
             The simulation step at which (if 2D projection is
             chosen) or up to which (3D projection) the
             distribution is calculated. Default the last step of
             the simulation.
-        proj: '2d', '3d'
+        plot: '2d', '3d'
             If 2D, plot the average state of each point of the
             box at the time step T. The actual particles and
             antiparticles are also plotted on top and bottom, to
@@ -219,13 +233,13 @@ def distribution(simul, m=None, T=None, proj='2d', savefig=False):
             plot the average state of each point of the box
             between 0 and T. Default 2D.
         savefig: bool
-            If True, save the plot figure on a PDF file with a
-            name corresponding to the function parameters. Note
-            that this can be quite slow for the 3D plot.
+            If True, save the plot figure in an adequately named
+            PDF file. Note that this can be quite slow for the
+            3D plot.
     '''
     n, N, L = simul.n, simul.N, simul.L
     if T == None: T = simul.N-2
-    if m == None: m = 50 if proj == '2d' else 10
+    if m == None: m = 50 if plot == '2d' else 10
 
     x = simul.space
     distr = np.zeros(x.shape)
@@ -244,7 +258,7 @@ def distribution(simul, m=None, T=None, proj='2d', savefig=False):
             # which is 0 state).
             distr[t, idx] = part[i]
 
-    if proj == '2d':
+    if plot == '2d':
         # In order to write the labels only once
         plt.scatter(np.nan, np.nan, c='b', s=1, label='Particles')
         plt.scatter(np.nan, np.nan, c='r', s=1, label='Anti-particles')
@@ -281,7 +295,7 @@ def distribution(simul, m=None, T=None, proj='2d', savefig=False):
         plt.legend()
         if savefig: plt.savefig(f'distr2d_N{T}_c{simul.c}.pdf', bbox_inches='tight')
         plt.show()
-    elif proj == '3d':
+    elif plot == '3d':
         fig = plt.figure(figsize=(7, 7))
         ax = fig.add_subplot(projection='3d')
 
