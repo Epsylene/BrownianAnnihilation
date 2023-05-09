@@ -211,7 +211,8 @@ def distribution(simul, m=None, T=None, proj='2d', savefig=False):
             between 0 and T. Default 2D.
         savefig: bool
             If True, save the plot figure on a PDF file with a
-            name corresponding to the function parameters.
+            name corresponding to the function parameters. Note
+            that this can be quite slow for the 3D plot.
     '''
     n, N, L = simul.n, simul.N, simul.L
     if T == None: T = simul.N-2
@@ -289,5 +290,5 @@ def distribution(simul, m=None, T=None, proj='2d', savefig=False):
         ax.set_ylabel('Position')
         ax.set_zlabel('State')
         plt.title(f'Spatial distribution of particles between\nN = 0 and N = {T} for c = {simul.c}')
-        if savefig: plt.savefig(f'distr3d_N{T}_c{simul.c}.pdf', bbox_inches='tight')
+        if savefig: plt.savefig(f'distr3d_N{T}_c{simul.c}.png', bbox_inches='tight')
         plt.show()

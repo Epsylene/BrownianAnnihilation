@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class Brownian:
-    def __init__(self, n, c, N=100, bounded=False):
+    def __init__(self, n, c, N=100, L=0, bounded=False):
         '''
         Brownian simulation constructor. The particles are set
         at random places along an axis with 2n+1 uniformly
@@ -20,21 +20,36 @@ class Brownian:
                 30 particles out of a total of a hundred)
             N: int
                 Number of steps for the simulation. Default 100.
+            L: float
+                The size of the box. Set it to 0 to have L=n
+                (note: this is more performant, because of
+                floating point arithmetics). Default 0.
             bounded: bool
-                Whether to bound-check the particles inside the
-                box. Note that the time-position plot does not
-                work well with this option.
+                Whether the system box is periodic and the
+                particles are bound to the [-L, L] range. Note
+                that the time-position plot does not work well
+                with this option set to True. Default False.
         '''
         self.n = n # number of particles
         self.c = c # initial proportion of particles
         self.N = N
-        self.L = L = n
+
+        # If L is 0, set L=n. This means that dx=1/2, a big
+        # enough value that floating point rounding errors are
+        # avoided, on the one hand, and that the code is
+        # actually faster (by a factor of 10 !), although this
+        # could vary from CPU to CPU and for different versions
+        # of Numpy.
+        if L == 0: L = self.L = n
+        else: self.L = L
 
         # Place particles at even intervals along the axis and
         # fill the rest with NaNs to avoid plotting values that
         # haven't been calculated
+        L = self.L
         self.x = np.ma.ones((self.N, n))*np.nan
         self.x[0] = np.random.choice(np.linspace(-L, L, 2*n+1), size=n, replace=False)
+        self.dx = L/(2*n)
 
         self.space = np.zeros((N, 2*n+1))
         self.space[::2] = np.linspace(-L, L, 2*n+1)
@@ -56,6 +71,11 @@ class Brownian:
         particle/anti-particle are destroyed. All the remaining
         particles are randomly moved either up or down on the
         simulation lattice, and the loop starts a new iteration.
+
+        Args:
+            bounded: bool
+                Whether to bound-check the particles inside the
+                box.
         '''
         N, n, L = self.N, self.n, self.L
         x, particles = self.x, self.particles
@@ -63,7 +83,7 @@ class Brownian:
         # The random moves of particles are precomputed for
         # performance
         self.annihilated = annihilated = np.zeros((N, n))
-        dx = np.random.choice([-0.5, 0.5], size=(N, n))
+        dx = np.random.choice([-self.dx, self.dx], size=(N, n))
 
         for (t, _) in enumerate(x[0:N-1]):
             # The positions of the particles are sorted and
@@ -131,14 +151,15 @@ class Brownian:
         if adaptative: plt.figure(figsize=(7/100*N, 1/5*n))
         
         # Plot the grid lines
+        dx = self.dx
         kwargs = {'color': 'gray', 'ls': '--', 'lw': 0.2}
         if n < 100 or adaptative:
             for i in np.linspace(-L, L, 2*n+1):
-                plt.axline((0, i), slope=1/2, **kwargs)
-                plt.axline((0, i), slope=-1/2, **kwargs)
+                plt.axline((0, i), slope=dx, **kwargs)
+                plt.axline((0, i), slope=-dx, **kwargs)
             for i in np.arange(2, plot_N, 2):
-                plt.axline((i, -L), slope=1/2, **kwargs)
-                plt.axline((i, L), slope=-1/2, **kwargs)
+                plt.axline((i, -L), slope=dx, **kwargs)
+                plt.axline((i, L), slope=-dx, **kwargs)
 
         # Mask the annihilated particles
         x = np.ma.array(self.x, mask=self.annihilated)
