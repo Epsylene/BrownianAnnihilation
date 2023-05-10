@@ -24,8 +24,8 @@ The file `common.py` contains the following methods to compute or plot several o
 - `concentration()`: compute and plot the concentration of particles over time.
 - `avg_concentration()`: compute and plot a concentration averaged over a number of experiments for a given simulation.
 - `fit()`: fit concentration data and return the corresponding $t^{1/\alpha}$ function exponent.
-- `avg_fit()`: fit the average concentration.
-- `alpha()`: plot the value of alpha as a function of the initial particle ratio.
+- `avg_fit()`: plot concentrations and a fit of the average concentration over a number of experiments.
+- `alpha_ctr()`: plot the value of alpha as a function of the initial particle ratio.
 - `end_state()`: plot the average final concentration over a number of experiments for a given simulation.
 - `distribution()`: plot the averaged spatial distribution of particle states.
 

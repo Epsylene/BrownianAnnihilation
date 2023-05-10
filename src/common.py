@@ -234,7 +234,7 @@ def avg_fit(simul, params, n_exp, plot=None, savefig=False):
 
     return f, a
 
-def alpha(simul, params, nc, savefig=False):
+def alpha_ctr(simul, params, nc, savefig=False):
     '''
     Plot alpha exponent values as a function of the initial
     concentration over the range [0, 1] with nc points and the
